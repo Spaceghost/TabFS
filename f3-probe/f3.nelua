@@ -1,0 +1,13 @@
+## pragmas.nogc = true
+## pragmas.noentrypoint = true
+## pragmas.nochecks = true
+## pragmas.writestderr = 'none'
+## pragmas.abort = 'trap'
+
+local function abi_version(): uint32 <cexport, codename 'f3_abi_version'>
+  return 1
+end
+
+local function add_u32(a: uint32, b: uint32): uint32 <cexport, codename 'f3_add_u32'>
+  return a + b
+end
