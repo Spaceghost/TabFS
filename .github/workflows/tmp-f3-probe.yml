@@ -1,0 +1,15 @@
+name: temporary-f3-probe
+on:
+  push:
+    branches: [tmp/gitextract-bootstrap]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          uname -a
+          cc --version | head -1
+          node --version
