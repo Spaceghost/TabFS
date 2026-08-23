@@ -2,7 +2,13 @@
 from pathlib import Path
 import sys
 
-EXPECTED = {"f3_abi_version": 0, "f3_add_u32": 0, "memory": 2}
+EXPECTED = {
+    "f3_abi_version": 0,
+    "f3_add_u32": 0,
+    "f3_postscript_size": 0,
+    "f3_parse_postscript": 0,
+    "memory": 2,
+}
 
 def uleb(data, off):
     value = shift = 0
