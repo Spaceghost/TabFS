@@ -1,0 +1,1 @@
+[Pinned Nelua source extraction](https://gitextract.com/api/v1/ingest?url=edubart%2Fnelua-lang&branch=a58450563e2d2ec49bff499865c8b5cfdf6ff81a&include_json=true&exclude_patterns=docs%2F*%2Cexamples%2F*%2Cspec%2F*%2Ctests%2F*%2C.github%2F*)
