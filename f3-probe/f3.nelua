@@ -87,7 +87,7 @@ local function parse_postscript(bytes: *[0]uint8, length: uint32,
   if file_size < (@uint64)(F3_POSTSCRIPT_SIZE) then
     return F3_STATUS_FILE_TOO_SMALL
   end
-  if bytes[30] ~= (@uint8)('F') or bytes[31] ~= (@uint8)('3') then
+  if bytes[30] ~= 70_u8 or bytes[31] ~= 51_u8 then
     return F3_STATUS_BAD_MAGIC
   end
 
