@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p build/musl
-          "$NELUA" -c --cc "$ZIG cc" --cflags "-target x86_64-linux-musl -O2" -o build/musl/f3.c f3-probe/f3.nelua
+          "$NELUA" -c --cc "$ZIG cc" --cflags="-target x86_64-linux-musl -O2" -o build/musl/f3.c f3-probe/f3.nelua
           "$ZIG" cc -target x86_64-linux-musl -static -std=c11 -O2 -If3-probe build/musl/f3.c f3-probe/abi_test.c -o build/musl/abi-test
           build/musl/abi-test
       - name: Build scalar and SIMD freestanding Wasm
@@ -55,7 +55,7 @@ jobs:
             mkdir -p "build/wasm-$mode"
             extra=
             if [[ "$mode" == simd128 ]]; then extra=-msimd128; fi
-            "$NELUA" -c --cc "$ZIG cc" --cflags "-target wasm32-freestanding -Oz $extra" -o "build/wasm-$mode/f3.c" f3-probe/f3.nelua
+            "$NELUA" -c --cc "$ZIG cc" --cflags="-target wasm32-freestanding -Oz $extra" -o "build/wasm-$mode/f3.c" f3-probe/f3.nelua
             "$ZIG" cc -target wasm32-freestanding -std=c11 -Oz $extra -nostdlib \
               -Wl,--no-entry -Wl,--gc-sections -Wl,--strip-all \
               -Wl,--export=f3_abi_version -Wl,--export=f3_add_u32 -Wl,--export-memory \
