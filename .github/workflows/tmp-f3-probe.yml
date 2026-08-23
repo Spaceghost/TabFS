@@ -37,7 +37,7 @@ jobs:
           set -euxo pipefail
           mkdir -p build/host
           "$NELUA" -c --cc "$ZIG cc" -o build/host/f3.c f3-probe/f3.nelua
-          "$ZIG" cc -std=c11 -O2 -Wall -Wextra -If3-probe build/host/f3.c f3-probe/abi_test.c -o build/host/abi-test
+          "$ZIG" cc -std=c11 -O2 -Wall -Wextra -Werror -If3-probe build/host/f3.c f3-probe/abi_test.c -o build/host/abi-test
           build/host/abi-test
       - name: Build and execute x86-64 musl ABI
         shell: bash
@@ -45,7 +45,7 @@ jobs:
           set -euxo pipefail
           mkdir -p build/musl
           "$NELUA" -c --cc "$ZIG cc" --cflags="-target x86_64-linux-musl -O2" -o build/musl/f3.c f3-probe/f3.nelua
-          "$ZIG" cc -target x86_64-linux-musl -static -std=c11 -O2 -If3-probe build/musl/f3.c f3-probe/abi_test.c -o build/musl/abi-test
+          "$ZIG" cc -target x86_64-linux-musl -static -std=c11 -O2 -Wall -Wextra -Werror -If3-probe build/musl/f3.c f3-probe/abi_test.c -o build/musl/abi-test
           build/musl/abi-test
       - name: Build scalar and SIMD freestanding Wasm
         shell: bash
@@ -58,7 +58,9 @@ jobs:
             "$NELUA" -c --cc "$ZIG cc" --cflags="-target wasm32-freestanding -Oz $extra" -o "build/wasm-$mode/f3.c" f3-probe/f3.nelua
             "$ZIG" cc -target wasm32-freestanding -std=c11 -Oz $extra -nostdlib \
               -Wl,--no-entry -Wl,--gc-sections -Wl,--strip-all \
-              -Wl,--export=f3_abi_version -Wl,--export=f3_add_u32 -Wl,--export-memory \
+              -Wl,--export=f3_abi_version -Wl,--export=f3_add_u32 \
+              -Wl,--export=f3_postscript_size -Wl,--export=f3_parse_postscript \
+              -Wl,--export-memory \
               "build/wasm-$mode/f3.c" -o "build/wasm-$mode/f3.wasm"
             python3 f3-probe/check_wasm.py "build/wasm-$mode/f3.wasm"
             node f3-probe/wasm_smoke.mjs "build/wasm-$mode/f3.wasm"
