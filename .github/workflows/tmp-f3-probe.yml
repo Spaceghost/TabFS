@@ -9,8 +9,62 @@ jobs:
   probe:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - run: |
-          uname -a
-          cc --version | head -1
-          node --version
+      - uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential curl git xz-utils python3
+      - name: Bootstrap pinned Zig and Nelua
+        shell: bash
+        run: |
+          set -euxo pipefail
+          zig_url=https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          zig_sha=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/zig.tar.xz" "$zig_url"
+          echo "$zig_sha  $RUNNER_TEMP/zig.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/zig"
+          tar -xf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP/zig" --strip-components=1
+          "$RUNNER_TEMP/zig/zig" version
+          git init -q "$RUNNER_TEMP/nelua"
+          git -C "$RUNNER_TEMP/nelua" remote add origin https://github.com/edubart/nelua-lang.git
+          git -C "$RUNNER_TEMP/nelua" fetch --depth 1 origin a58450563e2d2ec49bff499865c8b5cfdf6ff81a
+          git -C "$RUNNER_TEMP/nelua" checkout --detach --force FETCH_HEAD
+          make -C "$RUNNER_TEMP/nelua" -j2 CC="$RUNNER_TEMP/zig/zig cc"
+          echo "$RUNNER_TEMP/zig" >> "$GITHUB_PATH"
+          echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
+          echo "NELUA=$RUNNER_TEMP/nelua/nelua" >> "$GITHUB_ENV"
+      - name: Build and execute native host ABI
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p build/host
+          "$NELUA" -c --cc "$ZIG cc" -o build/host/f3.c f3-probe/f3.nelua
+          "$ZIG" cc -std=c11 -O2 -Wall -Wextra -If3-probe build/host/f3.c f3-probe/abi_test.c -o build/host/abi-test
+          build/host/abi-test
+      - name: Build and execute x86-64 musl ABI
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p build/musl
+          "$NELUA" -c --cc "$ZIG cc" --cflags "-target x86_64-linux-musl -O2" -o build/musl/f3.c f3-probe/f3.nelua
+          "$ZIG" cc -target x86_64-linux-musl -static -std=c11 -O2 -If3-probe build/musl/f3.c f3-probe/abi_test.c -o build/musl/abi-test
+          build/musl/abi-test
+      - name: Build scalar and SIMD freestanding Wasm
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for mode in scalar simd128; do
+            mkdir -p "build/wasm-$mode"
+            extra=
+            if [[ "$mode" == simd128 ]]; then extra=-msimd128; fi
+            "$NELUA" -c --cc "$ZIG cc" --cflags "-target wasm32-freestanding -Oz $extra" -o "build/wasm-$mode/f3.c" f3-probe/f3.nelua
+            "$ZIG" cc -target wasm32-freestanding -std=c11 -Oz $extra -nostdlib \
+              -Wl,--no-entry -Wl,--gc-sections -Wl,--strip-all \
+              -Wl,--export=f3_abi_version -Wl,--export=f3_add_u32 -Wl,--export-memory \
+              "build/wasm-$mode/f3.c" -o "build/wasm-$mode/f3.wasm"
+            python3 f3-probe/check_wasm.py "build/wasm-$mode/f3.wasm"
+            node f3-probe/wasm_smoke.mjs "build/wasm-$mode/f3.wasm"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: f3-probe-${{ github.run_attempt }}
+          path: build/
