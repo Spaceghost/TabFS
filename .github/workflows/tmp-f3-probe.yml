@@ -2,6 +2,7 @@ name: temporary-f3-probe
 on:
   push:
     branches: [tmp/gitextract-bootstrap]
+  pull_request:
 permissions:
   contents: read
 jobs:
